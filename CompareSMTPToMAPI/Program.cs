@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -31,10 +30,11 @@ namespace CompareSMTPToMAPI
                 var mapiFieldsCharacterCount = to.Length + cc.Length + bcc.Length;
                 var header = df.GetFieldByName("Headers");
                 var smtpHeader = new SmtpHeader(header, "®");
-                var xZantazRecip = smtpHeader.CustomFields.FirstOrDefault(t => t.Item1.Equals("X-Zantaz-Recip:", StringComparison.InvariantCultureIgnoreCase));
+                var xZantazRecip = smtpHeader.GetCustomField("X-ZANTAZ-RECIP:");
                 if (xZantazRecip != null)
                 {
-                    if (xZantazRecip.Item2.Length - mapiFieldsCharacterCount > 1000)
+                    var xzrString = string.Join(string.Empty, xZantazRecip);
+                    if (xzrString.Length - mapiFieldsCharacterCount > 1000)
                     {
                         _str.WriteLine(controlId);
                     }

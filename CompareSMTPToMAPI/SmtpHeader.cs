@@ -16,42 +16,89 @@ namespace CompareSMTPToMAPI
 
         public SmtpHeader(string header, string newline)
         {
-            StandardFields = new List<Tuple<string, string>>();
-            CustomFields = new List<Tuple<string, string>>();
-            var headerFields = ParseHeader(header, newline);
-            CustomFields = AssignStandardFields(headerFields);
+            Fields = new List<Tuple<string, string>>(ParseHeader(header, newline));
         }
 
         #endregion
 
         #region Properties
-        public List<Tuple<string, string>> StandardFields { get; private set; } 
+        private List<Tuple<string, string>> Fields { get; set; }
 
-        public List<Tuple<string, string>> CustomFields { get; private set; }
+        
+        #endregion
 
-        public readonly string[] Rfc822Fields =
+        #region Public Methods
+        public List<string> GetCustomField(string fieldName)
         {
-            "Return-path:",
-            "Received:",
-            "From:",
-            "To:",
-            "CC:",
-            "In-Reply-To:",
-            "Sender:",
-            "Reply-To:",
-            "BCC:",
-            "Message-Id:",
-            "Subject:",
-            "Date:"
-        };
+            var lFieldName = fieldName.ToLowerInvariant();
+            return GetField(lFieldName);
+        }
 
+        public List<string> GetFrom()
+        {
+            return GetField("from:");
+        }
 
+        public List<string> GetTo()
+        {
+            return GetField("to:");
+        }
+
+        public List<string> GetCc()
+        {
+            return GetField("cc:");
+        }
+
+        public List<string> GetBcc()
+        {
+            return GetField("bcc:");
+        }
+
+        public List<string> GetDate()
+        {
+            return GetField("date:");
+        }
+
+        public List<string> GetInReplyTo()
+        {
+            return GetField("in-reply-to:");
+        }
+
+        public List<string> GetMessageId()
+        {
+            return GetField("message-id:");
+        }
+
+        public List<string> GetReceived()
+        {
+            return GetField("received:");
+        }
+
+        public List<string> GetReplyTo()
+        {
+            return GetField("reply-to:");
+        }
+
+        public List<string> GetReturnPath()
+        {
+            return GetField("return-path:");
+        }
+
+        public List<string> GetSender()
+        {
+            return GetField("sender:");
+        }
+
+        public List<string> GetSubject()
+        {
+            return GetField("subject:");
+        }
 
         #endregion
 
         #region Methods
 
-        private List<Tuple<string, string>> ParseHeader(string header, string newline)
+        private static List<Tuple<string, string>> ParseHeader(string header, string newline)
         {
             string[] nlArray = {newline};
             var explodedHeader = header.Split(nlArray, StringSplitOptions.RemoveEmptyEntries);
@@ -68,49 +115,37 @@ namespace CompareSMTPToMAPI
                         str.Insert(0, headerFields.Last());
                         headerFields.RemoveAt(headerFields.Count - 1);
                     }
-                    headerFields.Add(str.ToString());
                 }
-                else
-                {
-                    headerFields.Add(str.ToString());
-                }
+                headerFields.Add(str.ToString());
             }
             var retVal = new List<Tuple<string, string>>();
             var components = headerFields.Select(headerField => headerField.Split(new[] {": "}, 2, StringSplitOptions.None)).ToList();
             foreach (var component in components)
             {
-                if (component.Length == 1)
+                switch (component.Length)
                 {
-                    var field = Tuple.Create(string.Format("{0}:", component[0]), string.Empty);
-                    retVal.Add(field);
-                }
-                else if (component.Length == 2)
-                {
-                    var field = Tuple.Create(string.Format("{0}:", component[0]), component[1]);
-                    retVal.Add(field);
-                }
-                else
-                {
-                    throw new InvalidDataException("Failed to parse field into appropriate parts.");
+                    case 1:
+                    {
+                        var field = Tuple.Create(string.Format("{0}:", component[0]), string.Empty);
+                        retVal.Add(field);
+                    }
+                        break;
+                    case 2:
+                    {
+                        var field = Tuple.Create(string.Format("{0}:", component[0]), component[1]);
+                        retVal.Add(field);
+                    }
+                        break;
+                    default:
+                        throw new InvalidDataException("Failed to parse field into appropriate parts.");
                 }
             }
             return retVal;
         }
 
-        private List<Tuple<string, string>> AssignStandardFields(List<Tuple<string, string>> retVal)
+        private List<string> GetField(string fieldName)
         {
-            foreach (var field in Rfc822Fields)
-            {
-                var lField = field.ToLowerInvariant();
-                var matches = retVal.Where(t => t.Item1.ToLowerInvariant().Equals(lField)).ToList();
-                if (matches.Count == 0) continue;
-                foreach (var match in matches)
-                {
-                    StandardFields.Add(match);
-                }
-                retVal.RemoveAll(t => t.Item1.ToLowerInvariant().Equals(lField));
-            }
-            return retVal;
+            return Fields.Where(t => t.Item1.ToLowerInvariant().Equals(fieldName)).Select(tuple => tuple.Item2).ToList();
         }
 
         #endregion
